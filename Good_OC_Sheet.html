@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OC Ultimate Sheet V4.0 (Mobile + Tabs)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1e1e1e;
+            --accent: #00d4ff; 
+            --accent-trans: rgba(0, 212, 255, 0.2);
+            --accent-z: #ffd700;
+            --text-main: #e0e0e0;
+            --border: #333;
+            --success: #00ff9d;
+            --danger: #ff4444;
+            --warning: #ffbb33;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- MOBILE RESPONSIVENESS (NEW) --- */
+        @media (max-width: 900px) {
+            body { flex-direction: column; height: auto; overflow-y: auto; }
+            .editor-container, .preview-container { min-width: 100%; height: auto; overflow: visible; box-shadow: none; }
+            .stats-chart-grid { grid-template-columns: 1fr !important; }
+            .sheet-header-grid { flex-direction: column; text-align: center; }
+            .sheet-meta { justify-content: center; }
+        }
+
+        /* --- LEFT: EDITOR --- */
+        .editor-container {
+            flex: 1;
+            background: var(--bg-panel);
+            padding: 20px;
+            border-radius: 10px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+            min-width: 350px;
+            display: flex; flex-direction: column;
+        }
+
+        h2 { border-bottom: 2px solid var(--accent); padding-bottom: 10px; color: var(--accent); margin-top: 30px; }
+        h3 { color: #fff; font-size: 1.1em; margin-bottom: 10px; }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; font-size: 0.9em; }
+        
+        input, textarea, select {
+            width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #444;
+            color: white; border-radius: 5px; font-size: 14px; box-sizing: border-box; 
+        }
+
+        textarea { resize: vertical; min-height: 80px; }
+        input:focus, select:focus { outline: 2px solid var(--accent); }
+        input[type="color"] { height: 40px; padding: 2px; cursor: pointer; }
+        input[type="file"] { padding: 5px; background: #333; }
+
+        /* Tabs Styling */
+        .tabs-wrapper { display: flex; gap: 5px; margin-bottom: 15px; flex-wrap: wrap; }
+        .tab-btn {
+            background: #333; color: #aaa; border: 1px solid #444; padding: 8px 15px;
+            cursor: pointer; border-radius: 5px 5px 0 0; flex: 1; min-width: 60px;
+            transition: 0.3s; font-weight: bold;
+        }
+        .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); }
+        .tab-add { background: #444; color: #fff; flex: 0; min-width: 40px; font-size: 1.2em; }
+
+        /* Power Inputs Styling */
+        .power-input-group {
+            background: #252525; padding: 15px; border-radius: 8px;
+            border-left: 3px solid var(--accent); margin-bottom: 15px; position: relative;
+        }
+        .remove-btn {
+            background: var(--danger); color: white; border: none; padding: 5px 10px;
+            cursor: pointer; position: absolute; top: 10px; right: 10px; border-radius: 3px;
+        }
+
+        /* Resistances Inputs */
+        .res-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+        /* Buttons */
+        .btn-action {
+            width: 100%; padding: 15px; background: var(--accent); color: #000;
+            font-weight: bold; border: none; cursor: pointer; font-size: 1.1em;
+            border-radius: 5px; transition: 0.3s; margin-top: 10px;
+        }
+        .btn-action:hover { filter: brightness(1.2); }
+        .btn-secondary { background: #444; color: white; padding: 10px; margin-top: 10px; width: auto; flex: 1; }
+        
+        /* Save System UI */
+        .save-system { background: #111; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #333; }
+        .save-controls { display: flex; gap: 10px; margin-top: 10px; }
+
+        /* --- RIGHT: PREVIEW AREA --- */
+        .preview-container {
+            flex: 1.2; display: flex; flex-direction: column; align-items: center;
+            padding: 20px; background: #000; border-radius: 10px; overflow-y: auto;
+            border: 1px solid var(--border);
+        }
+
+        #oc-sheet {
+            background: linear-gradient(145deg, #1a1a1a, #222);
+            width: 100%; max-width: 650px; padding: 30px;
+            border: 2px solid var(--accent); border-radius: 15px;
+            box-shadow: 0 0 20px var(--accent-trans); position: relative;
+        }
+
+        /* Sheet Header */
+        .sheet-header-grid {
+            display: flex; gap: 20px; align-items: center; margin-bottom: 20px;
+            border-bottom: 1px solid #444; padding-bottom: 20px;
+        }
+        .avatar-frame {
+            width: 120px; height: 120px; border-radius: 10px; 
+            border: 2px solid var(--accent); overflow: hidden; background: #000;
+            display: flex; justify-content: center; align-items: center; flex-shrink: 0;
+        }
+        .avatar-img { width: 100%; height: 100%; object-fit: cover; }
+        .header-text { flex: 1; }
+        .sheet-name { font-size: 2.8em; font-weight: bold; color: var(--accent); text-transform: uppercase; line-height: 1; margin-bottom: 5px;}
+        .sheet-subtitle { font-size: 1em; color: #888; letter-spacing: 2px; text-transform: uppercase; }
+        .sheet-meta { display: flex; gap: 20px; margin-top: 10px; font-size: 0.9em; color: #ccc;}
+        
+        /* Stats & Chart */
+        .stats-chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .chart-container {
+            background: rgba(0,0,0,0.2); border-radius: 10px; padding: 10px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sheet-section { margin-bottom: 20px; }
+        .sheet-section h3 { background: rgba(255,255,255,0.05); padding: 5px 10px; border-radius: 4px; border-left: 4px solid var(--accent); }
+        
+        .stat-row {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 6px; border-bottom: 1px dashed #333; padding-bottom: 2px; font-size: 0.9em;
+        }
+        .rank-badge {
+            background: var(--accent); color: #000; padding: 1px 6px;
+            border-radius: 4px; font-weight: bold; font-size: 0.85em; min-width: 25px; text-align: center;
+        }
+        .rank-z { background: var(--accent-z) !important; box-shadow: 0 0 10px var(--accent-z); }
+
+        /* Powers & Resistances */
+        .power-card {
+            background: rgba(0,0,0,0.2); border-left: 2px solid var(--accent); padding: 10px; margin-bottom: 8px; border-radius: 0 5px 5px 0;
+        }
+        .power-title { font-weight: bold; color: var(--accent); font-size: 1.05em; margin-bottom: 5px; }
+        .power-desc { font-size: 0.9em; color: #ddd; margin-bottom: 6px; white-space: pre-wrap; }
+        .power-meta { font-size: 0.8em; color: #aaa; margin-top: 2px; }
+        .power-meta strong { color: #fff; }
+
+        .res-badge-container { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
+        .res-badge {
+            font-size: 0.8em; padding: 2px 8px; border-radius: 4px; color: #000; font-weight: bold;
+        }
+        .res-green { background: var(--success); }
+        .res-red { background: var(--danger); }
+        .res-yellow { background: var(--warning); }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-track { background: #121212; }
+
+    </style>
+</head>
+<body>
+
+    <div class="editor-container">
+        <div class="save-system">
+            <label>💾 System Memory (V4)</label>
+            <div class="save-controls">
+                <select id="saved-ocs-list"><option value="">-- Saved OCs --</option></select>
+                <button class="btn-action btn-secondary" style="margin:0;" onclick="loadOC()">Load</button>
+                <button class="btn-action btn-secondary" style="margin:0; background: #2d6a4f;" onclick="saveOC()">Save</button>
+                <button class="btn-action btn-secondary" style="margin:0; background: #800e0e; flex:0;" onclick="deleteOC()">X</button>
+            </div>
+        </div>
+
+        <h2>🛠️ OC Configuration</h2>
+        
+        <div class="form-group">
+            <label>Character Name (Shared)</label>
+            <input type="text" id="inpName" placeholder="Ex: Raizen Shoya">
+        </div>
+        <div class="form-group">
+            <label>Description & Lore (Shared)</label>
+            <textarea id="inpDesc" placeholder="Character lore..."></textarea>
+        </div>
+        <div class="form-group" style="display:flex; gap:10px;">
+            <div style="flex:1"><label>Age</label><input type="text" id="inpAge" placeholder="19"></div>
+            <div style="flex:1"><label>Base Height</label><input type="text" id="inpHeight" placeholder="178"></div>
+            <div style="flex:1"><label>Base Weight</label><input type="text" id="inpWeight" placeholder="80"></div>
+        </div>
+
+        <div class="form-group">
+            <label>🎨 Theme Color</label>
+            <input type="color" id="inpColor" value="#00d4ff" oninput="updateTheme(this.value)">
+        </div>
+
+        <h2 style="border:none; margin-bottom:5px;">🧬 Forms & Transformations</h2>
+        <div class="tabs-wrapper" id="tabs-container">
+            </div>
+
+        <div id="form-specific-content">
+            <div class="form-group" style="background: #222; padding:10px; border-radius:5px;">
+                <label>🏷️ Form Name</label>
+                <input type="text" id="inpFormName" value="Base Form" oninput="updateTabName(this.value)">
+            </div>
+
+            <div class="form-group">
+                <label>🖼️ Form Avatar</label>
+                <input type="file" id="inpImage" accept="image/*" onchange="previewImage(event)">
+                <input type="hidden" id="imgDataStore"> </div>
+
+            <h3>🛡️ Resistances & Weaknesses</h3>
+            <div class="res-input-grid">
+                <div class="form-group">
+                    <label style="color:var(--success);">Immunities/Resistances</label>
+                    <input type="text" id="inpRes" placeholder="Fire, Poison (Comma separated)">
+                </div>
+                <div class="form-group">
+                    <label style="color:var(--danger);">Weaknesses</label>
+                    <input type="text" id="inpWeak" placeholder="Holy Magic, Water...">
+                </div>
+            </div>
+
+            <h3>🔮 Abilities (Per Form)</h3>
+            <div id="powers-container"></div>
+            <button class="btn-action btn-secondary" onclick="addPowerInput()">+ Add Ability</button>
+
+            <h3>📊 Tier Stats (Per Form)</h3>
+            <div id="stats-inputs"></div>
+        </div>
+
+        <button class="btn-action" onclick="generateSheet()">🔄 UPDATE SHEET</button>
+        <button class="btn-action" style="background: #fff; color:#000;" onclick="downloadSheet()">📸 DOWNLOAD IMAGE</button>
+    </div>
+
+    <div class="preview-container">
+        <div id="oc-sheet">
+            
+            <div class="sheet-header-grid">
+                <div class="avatar-frame">
+                    <img id="outAvatar" class="avatar-img" src="" style="display:none;" alt="OC Avatar">
+                    <span id="avatarPlaceholder" style="color:#555; font-size:0.8em;">NO IMG</span>
+                </div>
+                <div class="header-text">
+                    <div class="sheet-name" id="outName">NAME</div>
+                    <div class="sheet-subtitle" id="outFormName">BASE FORM</div>
+                    <div class="sheet-meta">
+                        <span id="outAge">Age: --</span>
+                        <span id="outHeight">Height: --</span>
+                        <span id="outWeight">Weight: --</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sheet-section">
+                <h3>📜 Profile</h3>
+                <p id="outDesc" style="font-size: 0.9em; line-height: 1.4; white-space: pre-wrap; color: #ccc;">...</p>
+            </div>
+
+            <div class="sheet-section">
+                <h3>⚡ Combat Statistics</h3>
+                <div class="stats-chart-grid">
+                    <div id="outStats"></div>
+                    <div class="chart-container">
+                        <canvas id="statChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sheet-section" id="outResSection" style="display:none;">
+                <h3>🛡️ Combat Affinity</h3>
+                <div style="margin-bottom:10px;" id="outResContainer">
+                    </div>
+                <div id="outWeakContainer">
+                    </div>
+            </div>
+
+            <div class="sheet-section" id="outPowersSection" style="display:none;">
+                <h3>🔮 Powers & Abilities</h3>
+                <div id="outPowersList"></div>
+            </div>
+
+            <div style="text-align: center; margin-top: 10px; font-size: 0.7em; color: #555;">
+                VS BATTLES TIER SYSTEM
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- CONFIG --- */
+        const statsList = [
+            { id: "ap", name: "Atk Potency", labelFull: "Attack Potency (AP)", key: "ap" },
+            { id: "str", name: "Striking", labelFull: "Striking Strength", key: "str" },
+            { id: "speed", name: "Speed", labelFull: "Speed", key: "speed" },
+            { id: "dur", name: "Durability", labelFull: "Durability", key: "dur" },
+            { id: "lift", name: "Lifting", labelFull: "Lifting Strength", key: "lift" },
+            { id: "sta", name: "Stamina", labelFull: "Stamina", key: "sta" },
+            { id: "int", name: "Intelligence", labelFull: "Intelligence", key: "int" },
+            { id: "ran", name: "Range", labelFull: "Range", key: "ran" }
+        ];
+
+        const tierSystem = {
+            "F": { val: 1, ap: "Average Human", speed: "Normal Human", lift: "Average", str: "Human Class", dur: "Human Level", int: "Average", ran: "Melee", sta: "Low" },
+            "E": { val: 2, ap: "Wall Level", speed: "Peak Human / Supersonic", lift: "Superhuman", str: "Wall Class", dur: "Wall Level", int: "Above Average", ran: "Meters", sta: "Medium" },
+            "D": { val: 3, ap: "Building / City Block", speed: "Supersonic+", lift: "Class 10", str: "Building Class", dur: "Building Level", int: "Gifted", ran: "Hundreds of Meters", sta: "High" },
+            "C": { val: 4, ap: "Town / City / Mountain", speed: "Hypersonic", lift: "Class K (Tons)", str: "Nuclear Class", dur: "City Level", int: "Genius", ran: "Kilometers", sta: "Very High" },
+            "B": { val: 5, ap: "Island / Country", speed: "High Hypersonic", lift: "Class M", str: "Tectonic Class", dur: "Country Level", int: "Extraordinary", ran: "Planetary", sta: "Extreme" },
+            "A": { val: 6, ap: "Moon / Planet", speed: "Relativistic / FTL", lift: "Class G", str: "Planetary Class", dur: "Planet Level", int: "Supergenius", ran: "Interstellar", sta: "Unlimited" },
+            "S": { val: 7, ap: "Star / Solar System", speed: "FTL+ / MFTL", lift: "Stellar", str: "Stellar Class", dur: "Star Level", int: "Omniscient (Local)", ran: "Galactic", sta: "Infinite" },
+            "SS": { val: 8, ap: "Galaxy / Multi-Galaxy", speed: "Infinite", lift: "Galactic", str: "Galactic Class", dur: "Galaxy Level", int: "Cosmic", ran: "Universal", sta: "Inexhaustible" },
+            "SSS": { val: 9, ap: "Universal+ / Multiversal", speed: "Immeasurable", lift: "Universal", str: "Universal Class", dur: "Universal", int: "Nigh-Omniscient", ran: "Multiversal", sta: "Absolute" },
+            "Z": { val: 10, ap: "BOUNDLESS (Omnipotent)", speed: "Irrelevant", lift: "Irrelevant", str: "Irrelevant", dur: "Indestructible", int: "Omniscient", ran: "Omnipresent", sta: "Limitless" }
+        };
+
+        let myChart = null; 
+        
+        // --- DATA STRUCTURE FOR TRANSFORMATION TABS ---
+        let formsData = [
+            { id: 0, name: "Base Form", stats: {}, powers: [], res: "", weak: "", img: null } // Initial Form
+        ];
+        let currentFormIndex = 0;
+
+        /* --- INIT --- */
+        window.onload = function() {
+            initStatsInputs();
+            renderTabs();
+            updateSavedList();
+            
+            // Default select stats F
+            statsList.forEach(s => document.getElementById(`sel_${s.id}`).value = "F");
+            
+            // Save initial state to memory
+            saveCurrentFormToMemory(); 
+            generateSheet();
+        };
+
+        function initStatsInputs() {
+            const container = document.getElementById('stats-inputs');
+            statsList.forEach(stat => {
+                container.innerHTML += `
+                    <div class="stat-block" style="background:#252525; padding:8px; margin-bottom:8px; border-radius:4px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <label style="margin:0;">${stat.labelFull}</label>
+                            <span id="desc_${stat.id}" style="font-size:0.8em; color:var(--accent);">Human</span>
+                        </div>
+                        <select id="sel_${stat.id}" onchange="updateRowDesc('${stat.id}', '${stat.key}')" style="margin-top:5px;">
+                            <option value="F">F - Weak (Tier 10)</option>
+                            <option value="E">E - Low (Tier 9)</option>
+                            <option value="D">D - Medium (Tier 8)</option>
+                            <option value="C">C - High (Tier 7)</option>
+                            <option value="B">B - Very High (Tier 6)</option>
+                            <option value="A">A - Elite (Tier 5)</option>
+                            <option value="S">S - Legend (Tier 4)</option>
+                            <option value="SS">SS - Divine (Tier 3)</option>
+                            <option value="SSS">SSS - Transcendental (Tier 2/1)</option>
+                            <option value="Z">Z - ABSOLUTE (Tier 0)</option>
+                        </select>
+                    </div>
+                `;
+            });
+        }
+
+        function updateRowDesc(id, key) {
+            const val = document.getElementById(`sel_${id}`).value;
+            const desc = tierSystem[val][key]; 
+            document.getElementById(`desc_${id}`).innerText = desc;
+            
+            const selectElem = document.getElementById(`sel_${id}`);
+            if(val === 'Z') {
+                selectElem.style.border = "1px solid gold"; selectElem.style.color = "gold";
+            } else {
+                selectElem.style.border = "1px solid #444"; selectElem.style.color = "white";
+            }
+        }
+
+        /* --- TABS SYSTEM LOGIC --- */
+        
+        function renderTabs() {
+            const container = document.getElementById('tabs-container');
+            container.innerHTML = "";
+            
+            formsData.forEach((form, index) => {
+                const isActive = index === currentFormIndex ? 'active' : '';
+                container.innerHTML += `<button class="tab-btn ${isActive}" onclick="switchTab(${index})">${form.name}</button>`;
+            });
+            container.innerHTML += `<button class="tab-btn tab-add" onclick="addNewForm()">+</button>`;
+            
+            if(formsData.length > 1) {
+                container.innerHTML += `<button class="tab-btn" style="background:#800e0e; flex:0;" onclick="deleteForm()">x</button>`;
+            }
+        }
+
+        function switchTab(newIndex) {
+            saveCurrentFormToMemory(); // Save current inputs before switching
+            currentFormIndex = newIndex;
+            loadFormFromMemory(newIndex); // Load new inputs
+            renderTabs();
+            generateSheet();
+        }
+
+        function addNewForm() {
+            saveCurrentFormToMemory();
+            // Clone Base Form (index 0) data for easier editing, or empty
+            const base = formsData[0]; 
+            const newForm = {
+                id: Date.now(),
+                name: "New Form",
+                stats: {...base.stats}, // Clone stats
+                powers: [], // Empty powers
+                res: base.res,
+                weak: base.weak,
+                img: base.img // Keep same image initially
+            };
+            formsData.push(newForm);
+            currentFormIndex = formsData.length - 1;
+            loadFormFromMemory(currentFormIndex);
+            renderTabs();
+            generateSheet();
+        }
+
+        function deleteForm() {
+            if(formsData.length <= 1) return alert("Cannot delete Base form");
+            if(confirm("Delete this form?")) {
+                formsData.splice(currentFormIndex, 1);
+                currentFormIndex = Math.max(0, currentFormIndex - 1);
+                loadFormFromMemory(currentFormIndex);
+                renderTabs();
+                generateSheet();
+            }
+        }
+
+        function updateTabName(val) {
+            formsData[currentFormIndex].name = val || "Form";
+            renderTabs();
+            document.getElementById('outFormName').innerText = val;
+        }
+
+        /* --- DATA HANDLING --- */
+        
+        function saveCurrentFormToMemory() {
+            const current = formsData[currentFormIndex];
+            
+            // Get Name Input
+            current.name = document.getElementById('inpFormName').value;
+
+            // Get Stats
+            const sObj = {};
+            statsList.forEach(s => sObj[s.id] = document.getElementById(`sel_${s.id}`).value);
+            current.stats = sObj;
+
+            // Get Powers
+            const pArr = [];
+            document.querySelectorAll('.power-input-group').forEach(p => {
+                pArr.push({ 
+                    name: p.querySelector('.p-name').value, 
+                    desc: p.querySelector('.p-desc').value,
+                    output: p.querySelector('.p-output').value,
+                    awakening: p.querySelector('.p-awakening').value
+                });
+            });
+            current.powers = pArr;
+
+            // Get Resistances
+            current.res = document.getElementById('inpRes').value;
+            current.weak = document.getElementById('inpWeak').value;
+
+            // Get Image
+            current.img = document.getElementById('imgDataStore').value;
+        }
+
+        function loadFormFromMemory(index) {
+            const data = formsData[index];
+            
+            document.getElementById('inpFormName').value = data.name;
+
+            // Load Stats
+            if(data.stats) {
+                for(const [k, v] of Object.entries(data.stats)) {
+                    const el = document.getElementById(`sel_${k}`);
+                    if(el) {
+                        el.value = v;
+                        const statObj = statsList.find(s => s.id === k);
+                        if(statObj) updateRowDesc(k, statObj.key);
+                    }
+                }
+            }
+
+            // Load Powers
+            document.getElementById('powers-container').innerHTML = "";
+            if(data.powers) data.powers.forEach(p => addPowerInput(p));
+
+            // Load Res
+            document.getElementById('inpRes').value = data.res || "";
+            document.getElementById('inpWeak').value = data.weak || "";
+
+            // Load Image
+            document.getElementById('imgDataStore').value = data.img || "";
+            if(data.img) {
+                const img = document.getElementById('outAvatar');
+                img.src = data.img;
+                img.style.display = 'block';
+                document.getElementById('avatarPlaceholder').style.display = 'none';
+            } else {
+                document.getElementById('outAvatar').style.display = 'none';
+                document.getElementById('avatarPlaceholder').style.display = 'block';
+            }
+        }
+
+        /* --- THEME & IMAGE HELPERS --- */
+        function updateTheme(color) {
+            document.documentElement.style.setProperty('--accent', color);
+            document.documentElement.style.setProperty('--accent-trans', color + '33'); 
+            if(myChart) generateSheet(); 
+        }
+
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const res = e.target.result;
+                    document.getElementById('imgDataStore').value = res; // Save to hidden input
+                    const img = document.getElementById('outAvatar');
+                    img.src = res;
+                    img.style.display = 'block';
+                    document.getElementById('avatarPlaceholder').style.display = 'none';
+                    formsData[currentFormIndex].img = res; // Auto save to memory
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function addPowerInput(data={}) {
+            const div = document.createElement('div');
+            div.className = 'power-input-group';
+            div.innerHTML = `
+                <button class="remove-btn" onclick="this.parentElement.remove()">X</button>
+                <div class="form-group"><input type="text" class="p-name" placeholder="Power Name" value="${data.name||''}"></div>
+                <div class="form-group"><textarea class="p-desc" placeholder="Effect description..." style="min-height:50px;">${data.desc||''}</textarea></div>
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1"><input type="text" class="p-output" placeholder="Max Output" value="${data.output||''}" style="font-size:0.8em"></div>
+                    <div style="flex:1"><input type="text" class="p-awakening" placeholder="Awakening" value="${data.awakening||''}" style="font-size:0.8em"></div>
+                </div>
+            `;
+            document.getElementById('powers-container').appendChild(div);
+        }
+
+        /* --- GENERATOR --- */
+        function generateSheet() {
+            saveCurrentFormToMemory(); // Ensure data is fresh
+
+            // 1. Shared Texts
+            document.getElementById('outName').innerText = document.getElementById('inpName').value || "UNKNOWN";
+            document.getElementById('outFormName').innerText = document.getElementById('inpFormName').value || "BASE";
+            document.getElementById('outAge').innerText = "Age: " + (document.getElementById('inpAge').value || "--");
+            document.getElementById('outHeight').innerText = "Height: " + (document.getElementById('inpHeight').value || "--");
+            document.getElementById('outWeight').innerText = "Weight: " + (document.getElementById('inpWeight').value || "--");
+            document.getElementById('outDesc').innerText = document.getElementById('inpDesc').value || "No data.";
+
+            // 2. Resistances Logic
+            const resTxt = document.getElementById('inpRes').value;
+            const weakTxt = document.getElementById('inpWeak').value;
+            const resContainer = document.getElementById('outResContainer');
+            const weakContainer = document.getElementById('outWeakContainer');
+            
+            resContainer.innerHTML = "";
+            weakContainer.innerHTML = "";
+
+            if(resTxt || weakTxt) {
+                document.getElementById('outResSection').style.display = 'block';
+                
+                if(resTxt) {
+                    resContainer.innerHTML = `<span style="font-size:0.9em; color:#aaa; margin-right:5px;">Resist/Immune:</span>`;
+                    resTxt.split(',').forEach(r => {
+                        if(r.trim()) resContainer.innerHTML += `<span class="res-badge res-green">${r.trim()}</span> `;
+                    });
+                }
+                if(weakTxt) {
+                    weakContainer.innerHTML = `<span style="font-size:0.9em; color:#aaa; margin-right:5px;">Weakness:</span>`;
+                    weakTxt.split(',').forEach(w => {
+                        if(w.trim()) weakContainer.innerHTML += `<span class="res-badge res-red">${w.trim()}</span> `;
+                    });
+                }
+            } else {
+                document.getElementById('outResSection').style.display = 'none';
+            }
+
+            // 3. Powers 
+            const pList = document.getElementById('outPowersList');
+            pList.innerHTML = "";
+            const current = formsData[currentFormIndex];
+            
+            if(current.powers && current.powers.length > 0) {
+                document.getElementById('outPowersSection').style.display = 'block';
+                current.powers.forEach(p => {
+                    if(p.name) {
+                        let metaHtml = "";
+                        if(p.output) metaHtml += `<div class="power-meta"><strong>Max Output:</strong> ${p.output}</div>`;
+                        if(p.awakening) metaHtml += `<div class="power-meta"><strong>Awakening:</strong> ${p.awakening}</div>`;
+                        pList.innerHTML += `<div class="power-card"><div class="power-title">${p.name}</div><div class="power-desc">${p.desc}</div>${metaHtml}</div>`;
+                    }
+                });
+            } else {
+                document.getElementById('outPowersSection').style.display = 'none';
+            }
+
+            // 4. Stats
+            const outStats = document.getElementById('outStats');
+            outStats.innerHTML = "";
+            const chartLabels = []; const chartData = [];
+
+            statsList.forEach(stat => {
+                const rank = document.getElementById(`sel_${stat.id}`).value;
+                const specificDesc = tierSystem[rank][stat.key]; 
+                const isZ = rank === 'Z' ? 'rank-z' : '';
+
+                outStats.innerHTML += `
+                    <div class="stat-row">
+                        <span style="font-weight:bold; color:var(--accent);">${stat.name}</span>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:0.75em; color:#888;">${specificDesc}</span>
+                            <span class="rank-badge ${isZ}">${rank}</span>
+                        </div>
+                    </div>
+                `;
+                chartLabels.push(stat.name);
+                chartData.push(tierSystem[rank].val);
+            });
+
+            renderChart(chartLabels, chartData);
+        }
+
+        function renderChart(labels, data) {
+            const ctx = document.getElementById('statChart').getContext('2d');
+            const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+            const accentTrans = getComputedStyle(document.documentElement).getPropertyValue('--accent-trans').trim();
+
+            if (myChart) myChart.destroy();
+            Chart.defaults.color = '#888'; Chart.defaults.borderColor = '#333';
+
+            myChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Stats Level',
+                        data: data,
+                        backgroundColor: accentTrans,
+                        borderColor: accentColor,
+                        borderWidth: 2,
+                        pointBackgroundColor: accentColor,
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: accentColor
+                    }]
+                },
+                options: {
+                    scales: {
+                        r: {
+                            angleLines: { color: '#333' },
+                            grid: { color: '#333' },
+                            pointLabels: { color: '#e0e0e0', font: { size: 10, weight:'bold' } },
+                            suggestedMin: 0, suggestedMax: 10, ticks: { display: false } 
+                        }
+                    },
+                    plugins: { legend: { display: false } },
+                    maintainAspectRatio: false, responsive: true
+                }
+            });
+        }
+
+        function downloadSheet() {
+            const element = document.getElementById("oc-sheet");
+            html2canvas(element, { backgroundColor: null, scale: 2, useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = (document.getElementById('inpName').value || 'OC_Sheet') + '.png';
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+            });
+        }
+
+        /* --- SAVE SYSTEM (V4) --- */
+        function getStorage() { return JSON.parse(localStorage.getItem('my_ocs_v4')) || []; }
+        function updateSavedList() {
+            const list = getStorage();
+            const sel = document.getElementById('saved-ocs-list');
+            sel.innerHTML = '<option value="">-- Saved OCs --</option>';
+            list.forEach((oc, i) => sel.innerHTML += `<option value="${i}">${oc.name}</option>`);
+        }
+
+        function saveOC() {
+            saveCurrentFormToMemory(); // Update global array
+            const name = document.getElementById('inpName').value;
+            if(!name) return alert("Enter name first");
+
+            const newOC = {
+                name,
+                color: document.getElementById('inpColor').value,
+                desc: document.getElementById('inpDesc').value,
+                age: document.getElementById('inpAge').value,
+                height: document.getElementById('inpHeight').value,
+                weight: document.getElementById('inpWeight').value,
+                forms: formsData // Save ALL tabs
+            };
+
+            const list = getStorage();
+            const idx = list.findIndex(o => o.name === name);
+            if(idx >= 0) { if(!confirm("Overwrite?")) return; list[idx] = newOC; }
+            else list.push(newOC);
+
+            try {
+                localStorage.setItem('my_ocs_v4', JSON.stringify(list));
+                updateSavedList();
+                alert("Saved (V4 Structure)!");
+            } catch(e) { alert("Error: Image too big. Try saving without image."); }
+        }
+
+        function loadOC() {
+            const idx = document.getElementById('saved-ocs-list').value;
+            if(idx==="") return;
+            const data = getStorage()[idx];
+
+            document.getElementById('inpName').value = data.name;
+            document.getElementById('inpColor').value = data.color || '#00d4ff';
+            updateTheme(data.color || '#00d4ff');
+            document.getElementById('inpDesc').value = data.desc;
+            document.getElementById('inpAge').value = data.age;
+            document.getElementById('inpHeight').value = data.height;
+            document.getElementById('inpWeight').value = data.weight;
+
+            // Load Tabs/Forms
+            if(data.forms && data.forms.length > 0) {
+                formsData = data.forms;
+                currentFormIndex = 0;
+            } else {
+                // Fallback for old save structure if manual migration needed
+                alert("Legacy save detected. Loading as Base form.");
+            }
+            
+            loadFormFromMemory(currentFormIndex);
+            renderTabs();
+            generateSheet();
+        }
+
+        function deleteOC() {
+            const idx = document.getElementById('saved-ocs-list').value;
+            if(idx==="") return;
+            if(confirm("Delete?")) {
+                const list = getStorage();
+                list.splice(idx,1);
+                localStorage.setItem('my_ocs_v4', JSON.stringify(list));
+                updateSavedList();
+                window.location.reload(); // Refresh to clean state
+            }
+        }
+    </script>
+</body>
+</html>
